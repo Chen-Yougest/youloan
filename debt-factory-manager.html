@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>债务 & 工厂财产管理系统</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --panel:#ffffff; --ink:#1f2933; --muted:#7b8794;
+    --line:#e4e7eb; --brand:#2563eb; --brand-soft:#eaf1ff;
+    --red:#e11d48; --red-soft:#fde7ec; --amber:#d97706; --amber-soft:#fdf0dc;
+    --green:#059669; --green-soft:#e3f6ee; --purple:#7c3aed; --purple-soft:#f1e9ff;
+    --shadow:0 1px 3px rgba(16,24,40,.06),0 6px 18px rgba(16,24,40,.05);
+    --radius:14px;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5}
+  .app{display:flex;min-height:100vh}
+  /* Sidebar */
+  .side{width:230px;background:var(--panel);border-right:1px solid var(--line);padding:20px 14px;flex-shrink:0;
+    position:sticky;top:0;height:100vh;overflow:auto}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;margin-bottom:22px;padding:4px 8px}
+  .logo .dot{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--brand),#60a5fa);
+    display:grid;place-items:center;color:#fff;font-size:16px}
+  .nav{display:flex;flex-direction:column;gap:4px}
+  .nav a{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;color:var(--muted);
+    text-decoration:none;cursor:pointer;font-weight:500;transition:.15s}
+  .nav a:hover{background:var(--bg);color:var(--ink)}
+  .nav a.active{background:var(--brand-soft);color:var(--brand);font-weight:600}
+  .nav a .ic{width:18px;text-align:center}
+  .side-foot{margin-top:24px;padding:12px;border:1px dashed var(--line);border-radius:10px;font-size:12px;color:var(--muted)}
+  /* Main */
+  .main{flex:1;padding:26px 30px;max-width:1200px;margin:0 auto;width:100%}
+  .topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;flex-wrap:wrap;gap:12px}
+  .topbar h1{font-size:22px;margin:0}
+  .topbar .sub{color:var(--muted);font-size:13px;margin-top:3px}
+  .btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:9px 14px;border-radius:10px;
+    cursor:pointer;font-size:13px;font-weight:500;transition:.15s;display:inline-flex;align-items:center;gap:6px}
+  .btn:hover{background:var(--bg)}
+  .btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+  .btn.primary:hover{filter:brightness(1.05)}
+  .btn.danger{background:#fff;border-color:var(--red);color:var(--red)}
+  .btn.ghost{background:transparent;border-color:transparent;color:var(--brand)}
+  .btn.sm{padding:6px 10px;font-size:12px;border-radius:8px}
+  .row{display:flex;gap:14px;flex-wrap:wrap}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+  .card .hd{padding:16px 18px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+  .card .hd h3{margin:0;font-size:15px}
+  .card .bd{padding:18px}
+  .grid-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px}
+  .stat{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow)}
+  .stat .k{color:var(--muted);font-size:12.5px;display:flex;align-items:center;gap:6px}
+  .stat .v{font-size:23px;font-weight:700;margin-top:8px}
+  .stat .tag{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;margin-top:6px;display:inline-block}
+  .t-red{background:var(--red-soft);color:var(--red)} .t-amber{background:var(--amber-soft);color:var(--amber)}
+  .t-green{background:var(--green-soft);color:var(--green)} .t-blue{background:var(--brand-soft);color:var(--brand)}
+  .t-purple{background:var(--purple-soft);color:var(--purple)}
+  .cols{display:grid;grid-template-columns:1.4fr 1fr;gap:18px}
+  @media(max-width:920px){.cols{grid-template-columns:1fr}.side{display:none}.app{flex-direction:column}}
+  /* Tables */
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:12.5px;background:#fafbfc}
+  tbody tr:hover{background:#fafbfc}
+  td .amt{font-variant-numeric:tabular-nums;font-weight:600}
+  .pill{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px;display:inline-block}
+  .mini-tabs{display:flex;gap:6px;margin-bottom:14px}
+  .mini-tabs button{border:1px solid var(--line);background:#fff;padding:7px 14px;border-radius:9px;cursor:pointer;font-size:13px;color:var(--muted)}
+  .mini-tabs button.active{background:var(--brand-soft);color:var(--brand);border-color:var(--brand-soft);font-weight:600}
+  /* Forms */
+  .form-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field label{font-size:12.5px;color:var(--muted);font-weight:500}
+  .field input,.field select,.field textarea{padding:9px 11px;border:1px solid var(--line);border-radius:9px;font-size:13.5px;
+    font-family:inherit;background:#fff;color:var(--ink);width:100%}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--brand-soft)}
+  .form-actions{display:flex;gap:10px;margin-top:14px}
+  .collapsible{display:none}
+  .collapsible.open{display:block}
+  .muted{color:var(--muted)}
+  .empty{padding:34px;text-align:center;color:var(--muted)}
+  .due-soon{color:var(--amber);font-weight:600}
+  .due-now{color:var(--red);font-weight:700}
+  .overdue{color:var(--red);font-weight:700}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+  .toolbar input,.toolbar select{padding:8px 10px;border:1px solid var(--line);border-radius:9px;font-size:13px}
+  .w100{width:100%}
+  .bar{height:9px;border-radius:6px;background:var(--line);overflow:hidden;min-width:80px}
+  .bar > span{display:block;height:100%;background:var(--brand)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+  .legend i{width:10px;height:10px;border-radius:3px;display:inline-block;margin-right:5px;vertical-align:middle}
+  .alert-line{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border-radius:10px;
+    background:var(--red-soft);margin-bottom:8px;font-size:13px}
+  .alert-line.amber{background:var(--amber-soft)}
+  .banner{padding:12px 16px;border-radius:11px;font-size:13.5px;margin-bottom:16px;display:flex;gap:8px;align-items:center;line-height:1.4}
+  .banner-local{background:var(--brand-soft);color:var(--brand)}
+  .banner-ok{background:var(--green-soft);color:var(--green)}
+  .banner-amber{background:var(--amber-soft);color:var(--amber)}
+  .banner-err{background:var(--red-soft);color:var(--red);font-weight:500;border:1px solid #f3b8c4}
+  canvas{max-width:100%}
+  .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  .modal-bg{position:fixed;inset:0;background:rgba(16,24,40,.45);display:none;place-items:center;z-index:50;padding:20px}
+  .modal-bg.open{display:grid}
+  .modal{background:#fff;border-radius:16px;padding:24px;width:min(520px,100%);max-height:88vh;overflow:auto;box-shadow:var(--shadow)}
+  .modal h3{margin:0 0 16px}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 18px;
+    border-radius:10px;font-size:13px;opacity:0;transition:.25s;pointer-events:none;z-index:99}
+  .toast.show{opacity:1}
+  .seg{display:flex;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+  .seg button{border:0;background:#fff;padding:8px 16px;cursor:pointer;font-size:13px;color:var(--muted)}
+  .seg button.active{background:var(--brand);color:#fff}
+  .split-2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:760px){.split-2{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="side">
+    <div class="logo"><span class="dot">💼</span> 债厂通</div>
+    <nav class="nav" id="nav">
+      <a data-view="dashboard"><span class="ic">📊</span> 首页总览</a>
+      <a data-view="debt" class="active"><span class="ic">📝</span> 债务管理</a>
+      <a data-view="factory"><span class="ic">🏭</span> 工厂财产</a>
+      <a data-view="big"><span class="ic">💸</span> 大额消费</a>
+      <a data-view="data"><span class="ic">🗂️</span> 数据 / JSON</a>
+    </nav>
+    <div class="side-foot">
+      数据保存在本地浏览器，并通过统一 <b>JSON 文件</b> 导入导出，方便随时迁移与备份。
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="pageTitle">债务管理</h1>
+        <div class="sub" id="pageSub">记录与追踪每一笔借款与到期时间</div>
+      </div>
+      <div class="row">
+        <button class="btn" id="btnExportTop">⬇️ 导出 JSON</button>
+        <button class="btn primary" id="btnAddTop">＋ 新增</button>
+      </div>
+    </div>
+
+    <!-- ============ DASHBOARD ============ -->
+    <section id="view-dashboard" class="view">
+      <div id="syncBanner"></div>
+      <div class="grid-stats" id="statCards"></div>
+      <div class="cols">
+        <div class="card">
+          <div class="hd"><h3>工厂收支趋势（近 6 个月）</h3></div>
+          <div class="bd"><canvas id="trendChart" height="220"></canvas>
+            <div class="legend"><span><i style="background:var(--green)"></i>入账</span><span><i style="background:var(--red)"></i>消费</span></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="hd"><h3>消费结构占比</h3></div>
+          <div class="bd"><canvas id="pieChart" height="220"></canvas>
+            <div class="legend" id="pieLegend"></div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:18px">
+        <div class="hd"><h3>⏰ 债务到期预警</h3><span class="muted" id="dueCount" style="font-size:12px"></span></div>
+        <div class="bd" id="dueList"></div>
+      </div>
+    </section>
+
+    <!-- ============ DEBT ============ -->
+    <section id="view-debt" class="view" style="display:none">
+      <div class="card">
+        <div class="hd"><h3>债务列表</h3><button class="btn sm primary" id="toggleDebtForm">＋ 添加债务</button></div>
+        <div class="card collapsible" id="debtFormWrap" style="border:0;box-shadow:none;padding:0 18px 6px">
+          <div class="bd">
+            <div class="form-grid">
+              <div class="field"><label>债权人 / 借款人</label><input id="d_creditor" placeholder="如：张三 / 银行"></div>
+              <div class="field"><label>债务金额 (元)</label><input id="d_amount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+              <div class="field"><label>借款日期</label><input id="d_borrow" type="date"></div>
+              <div class="field"><label>到期日期</label><input id="d_due" type="date"></div>
+              <div class="field"><label>年利率 (%)</label><input id="d_rate" type="number" min="0" step="0.1" value="0" placeholder="0"></div>
+              <div class="field"><label>状态</label>
+                <select id="d_status"><option value="active">待还</option><option value="partial">部分已还</option><option value="paid">已结清</option></select>
+              </div>
+              <div class="field"><label>已还金额 (元)</label><input id="d_repaid" type="number" min="0" step="0.01" value="0" placeholder="0.00"></div>
+              <div class="field" style="grid-column:1/-1"><label>备注</label><textarea id="d_note" rows="2" placeholder="用途 / 合同号等"></textarea></div>
+            </div>
+            <div class="form-actions">
+              <button class="btn primary" id="saveDebt">保存债务</button>
+              <button class="btn" id="cancelDebt">取消</button>
+            </div>
+          </div>
+        </div>
+        <div class="bd" style="padding-top:0">
+          <div class="toolbar">
+            <input id="debtSearch" placeholder="🔍 搜索债权人 / 备注" style="flex:1;min-width:180px">
+            <select id="debtFilter"><option value="all">全部状态</option><option value="active">待还</option><option value="partial">部分已还</option><option value="paid">已结清</option></select>
+          </div>
+          <div id="debtTable"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FACTORY ============ -->
+    <section id="view-factory" class="view" style="display:none">
+      <div class="mini-tabs" id="factoryTabs">
+        <button data-ftab="source" class="active">📦 货源库存</button>
+        <button data-ftab="txn">💱 消费 / 入账</button>
+      </div>
+
+      <!-- Source -->
+      <div id="ftab-source">
+        <div class="card">
+          <div class="hd"><h3>货源库存</h3><button class="btn sm primary" id="toggleSrcForm">＋ 添加货源</button></div>
+          <div class="card collapsible" id="srcFormWrap" style="border:0;box-shadow:none;padding:0 18px 6px">
+            <div class="bd">
+              <div class="form-grid">
+                <div class="field"><label>货源 / 物料名称</label><input id="s_name" placeholder="如：钢材 / 包装盒"></div>
+                <div class="field"><label>供应商</label><input id="s_supplier" placeholder="供应商名称"></div>
+                <div class="field"><label>类别</label><input id="s_type" placeholder="原材料 / 设备 / 辅料"></div>
+                <div class="field"><label>单价 (元)</label><input id="s_price" type="number" min="0" step="0.01" placeholder="0.00"></div>
+                <div class="field"><label>数量</label><input id="s_qty" type="number" min="0" step="0.01" placeholder="0"></div>
+                <div class="field"><label>单位</label><input id="s_unit" placeholder="件 / 吨 / 套"></div>
+                <div class="field"><label>入库日期</label><input id="s_date" type="date"></div>
+                <div class="field" style="grid-column:1/-1"><label>备注</label><input id="s_note" placeholder="规格 / 批次等"></div>
+              </div>
+              <div class="form-actions"><button class="btn primary" id="saveSrc">保存货源</button><button class="btn" id="cancelSrc">取消</button></div>
+            </div>
+          </div>
+          <div class="bd" style="padding-top:0"><div id="srcTable"></div></div>
+        </div>
+      </div>
+
+      <!-- Transactions -->
+      <div id="ftab-txn" style="display:none">
+        <div class="card">
+          <div class="hd"><h3>消费 / 入账流水</h3><button class="btn sm primary" id="toggleTxnForm">＋ 添加流水</button></div>
+          <div class="card collapsible" id="txnFormWrap" style="border:0;box-shadow:none;padding:0 18px 6px">
+            <div class="bd">
+              <div class="form-grid">
+                <div class="field" style="grid-column:1/-1"><label>类型</label>
+                  <div class="seg" id="txnTypeSeg">
+                    <button data-type="expense" class="active">消费 / 支出</button>
+                    <button data-type="income">入账 / 收入</button>
+                  </div>
+                </div>
+                <div class="field"><label>分类</label><input id="t_cat" placeholder="如：原材料 / 工资 / 销售"></div>
+                <div class="field"><label>金额 (元)</label><input id="t_amount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+                <div class="field"><label>日期</label><input id="t_date" type="date"></div>
+                <div class="field" style="grid-column:1/-1"><label>备注</label><input id="t_note" placeholder="说明"></div>
+              </div>
+              <div class="form-actions"><button class="btn primary" id="saveTxn">保存流水</button><button class="btn" id="cancelTxn">取消</button></div>
+            </div>
+          </div>
+          <div class="bd" style="padding-top:0">
+            <div class="toolbar">
+              <select id="txnTypeFilter"><option value="all">全部类型</option><option value="income">入账</option><option value="expense">消费</option></select>
+              <select id="txnMonth"><option value="all">全部月份</option></select>
+            </div>
+            <div id="txnTable"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ BIG EXPENSE ============ -->
+    <section id="view-big" class="view" style="display:none">
+      <div class="card">
+        <div class="hd"><h3>大额消费管理</h3><button class="btn sm primary" id="toggleBigForm">＋ 登记大额消费</button></div>
+        <div class="card collapsible" id="bigFormWrap" style="border:0;box-shadow:none;padding:0 18px 6px">
+          <div class="bd">
+            <div class="form-grid">
+              <div class="field"><label>消费事项</label><input id="b_title" placeholder="如：新生产线设备采购"></div>
+              <div class="field"><label>金额 (元)</label><input id="b_amount" type="number" min="0" step="0.01" placeholder="0.00"></div>
+              <div class="field"><label>日期</label><input id="b_date" type="date"></div>
+              <div class="field"><label>类别</label><input id="b_cat" placeholder="设备 / 装修 / 投资 / 其他"></div>
+              <div class="field"><label>审批状态</label>
+                <select id="b_status"><option value="pending">待审批</option><option value="approved">已通过</option><option value="rejected">已驳回</option></select>
+              </div>
+              <div class="field" style="grid-column:1/-1"><label>说明</label><textarea id="b_note" rows="2" placeholder="用途与必要性说明"></textarea></div>
+            </div>
+            <div class="form-actions"><button class="btn primary" id="saveBig">保存</button><button class="btn" id="cancelBig">取消</button></div>
+          </div>
+        </div>
+        <div class="bd" style="padding-top:0">
+          <div class="toolbar">
+            <label class="muted" style="font-size:13px">大额阈值：¥<input id="bigThreshold" type="number" min="0" step="100" style="width:110px;display:inline-block;margin:0 6px">元</label>
+            <select id="bigFilter"><option value="all">全部</option><option value="pending">待审批</option><option value="approved">已通过</option><option value="rejected">已驳回</option></select>
+            <label style="font-size:13px;color:var(--muted)"><input type="checkbox" id="bigOnlyOver" style="vertical-align:middle"> 仅显示超过阈值</label>
+          </div>
+          <div id="bigTable"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ DATA ============ -->
+    <section id="view-data" class="view" style="display:none">
+      <div class="split-2">
+        <div class="card"><div class="hd"><h3>📤 导出 / 备份</h3></div>
+          <div class="bd">
+            <p class="muted">将数据导出为单一 JSON 文件，可存到网盘或拷贝到其它设备，实现无缝迁移。</p>
+            <button class="btn primary w100" id="btnExport">⬇️ 下载 JSON 文件</button>
+            <p class="hint" id="exportHint"></p>
+          </div>
+        </div>
+        <div class="card"><div class="hd"><h3>📥 导入 / 恢复</h3></div>
+          <div class="bd">
+            <p class="muted">选择一个此前导出的 JSON 文件以载入数据（将覆盖当前数据，请先备份）。</p>
+            <input type="file" id="fileInput" accept="application/json,.json" style="margin-bottom:10px">
+            <button class="btn w100" id="btnImport">读取并导入</button>
+            <p class="hint" id="importHint"></p>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:18px">
+        <div class="hd"><h3>☁️ 服务器同步设置</h3><button class="btn sm" id="btnSyncNow">立即同步</button></div>
+        <div class="bd">
+          <p class="muted">系统采用「<b>本地优先</b>」策略：每次保存都会先写入本机，再异步尝试上传到服务器。若服务器不可用，数据不会丢失，首页将提示联系维护人员。</p>
+          <div class="form-grid">
+            <div class="field" style="grid-column:1/-1"><label style="flex-direction:row;align-items:center;gap:8px;cursor:pointer">
+              <input type="checkbox" id="syncEnabled" style="width:auto"> 启用服务器同步（开启后自动上传数据到下方地址）</label></div>
+            <div class="field" style="grid-column:1/-1"><label>服务器地址（接收 POST JSON）</label><input id="syncEndpoint" placeholder="https://你的服务器/api/sync"></div>
+            <div class="field" style="grid-column:1/-1"><label>API Key / 令牌（可选）</label><input id="syncApiKey" placeholder="如服务器需要鉴权则填写"></div>
+          </div>
+          <div class="form-actions">
+            <button class="btn primary" id="saveSyncConf">保存同步设置</button>
+            <button class="btn ghost" id="testSync">测试连接</button>
+          </div>
+          <p class="hint" id="syncStatus"></p>
+          <div class="hint">本机设备 ID：<b id="deviceIdShow"></b></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:18px"><div class="hd"><h3>⚠️ 危险操作</h3></div>
+        <div class="bd">
+          <p class="muted">清空本地所有数据（无法撤销，请先导出备份）。</p>
+          <button class="btn danger" id="btnClear">清空全部数据</button>
+          <p class="hint" id="metaHint"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Edit modal (debt) -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal" id="modalBody"></div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== 数据模型 ===================== */
+const STORE_KEY = 'debt_factory_db_v1';
+const today = () => new Date();
+function uuid(){return 'x'+Date.now().toString(36)+Math.random().toString(36).slice(2,7)}
+
+function defaultDB(){
+  return {
+    version:'1.0',
+    updatedAt:new Date().toISOString(),
+    settings:{ currency:'CNY', bigThreshold:5000,
+      sync:{ enabled:false, endpoint:'', apiKey:'', deviceId:uuid(), lastSync:null, lastStatus:'idle', lastError:'' } },
+    debts:[],
+    factory:{ sources:[], transactions:[] },
+    bigExpenses:[]
+  };
+}
+let DB = loadDB();
+
+function loadDB(){
+  try{
+    const s = localStorage.getItem(STORE_KEY);
+    if(s){ const d=JSON.parse(s); if(d && d.version) return d; }
+  }catch(e){ console.warn('load fail',e) }
+  return defaultDB();
+}
+function saveDB(){
+  DB.updatedAt = new Date().toISOString();
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(DB)); }catch(e){ toast('保存失败：'+e.message) }
+  scheduleSync(); // 本地优先：本机已落盘，再异步尝试上传服务器
+}
+
+/* ===================== 工具 ===================== */
+const $ = s => document.querySelector(s);
+const $$ = s => Array.from(document.querySelectorAll(s));
+function money(n){ n=Number(n)||0; return '¥'+n.toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function daysUntil(dateStr){
+  if(!dateStr) return null;
+  const d=new Date(dateStr+'T00:00:00'); const t=new Date(); t.setHours(0,0,0,0);
+  return Math.round((d-t)/86400000);
+}
+function dueLabel(dateStr){
+  const d=daysUntil(dateStr); if(d===null) return {txt:'—',cls:''};
+  if(d<0) return {txt:`逾期 ${Math.abs(d)} 天`,cls:'overdue'};
+  if(d===0) return {txt:'今天到期',cls:'due-now'};
+  if(d<=7) return {txt:`${d} 天后到期`,cls:'due-now'};
+  if(d<=30) return {txt:`${d} 天后到期`,cls:'due-soon'};
+  return {txt:`${d} 天后到期`,cls:''};
+}
+function toast(msg){ const t=$('#toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),2200); }
+function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+/* ===================== 导航 ===================== */
+const pageMeta = {
+  dashboard:{t:'首页总览',s:'财务健康度与到期预警一览'},
+  debt:{t:'债务管理',s:'记录与追踪每一笔借款与到期时间'},
+  factory:{t:'工厂财产管理',s:'货源库存与消费 / 入账流水'},
+  big:{t:'大额消费管理',s:'登记、审批与超阈值监控'},
+  data:{t:'数据 / JSON',s:'导入导出，统一文件便于迁移'}
+};
+function switchView(v){
+  $$('.view').forEach(x=>x.style.display='none');
+  $('#view-'+v).style.display='block';
+  $$('#nav a').forEach(a=>a.classList.toggle('active',a.dataset.view===v));
+  $('#pageTitle').textContent=pageMeta[v].t;
+  $('#pageSub').textContent=pageMeta[v].s;
+  if(v==='dashboard') renderDashboard();
+  if(v==='debt') renderDebt();
+  if(v==='factory') renderFactory();
+  if(v==='big') renderBig();
+  if(v==='data') renderDataMeta();
+}
+$('#nav').addEventListener('click',e=>{ const a=e.target.closest('a'); if(a) switchView(a.dataset.view); });
+
+/* 顶部新增按钮按当前视图跳转 */
+$('#btnAddTop').addEventListener('click',()=>{
+  const v=$$('#nav a.active')[0].dataset.view;
+  if(v==='debt'){ $('#debtFormWrap').classList.add('open'); $('#d_creditor').focus(); }
+  if(v==='factory'){ const ft=$$('#factoryTabs button.active')[0].dataset.ftab;
+    if(ft==='source'){ $('#srcFormWrap').classList.add('open'); $('#s_name').focus(); } else { $('#txnFormWrap').classList.add('open'); $('#t_cat').focus(); } }
+  if(v==='big'){ $('#bigFormWrap').classList.add('open'); $('#b_title').focus(); }
+  window.scrollTo({top:0,behavior:'smooth'});
+});
+
+/* ===================== 首页总览 ===================== */
+function renderDashboard(){
+  const debts = DB.debts.filter(d=>d.status!=='paid');
+  const totalDebt = debts.reduce((s,d)=>s+(Number(d.amount)||0)-(Number(d.repaid)||0),0);
+  const due = DB.debts.filter(d=>d.status!=='paid').map(d=>({d,days:daysUntil(d.due)})).sort((a,b)=>a.days-b.days);
+  const urgent = due.filter(x=>x.days!==null && x.days<=30).length;
+  const overdue = due.filter(x=>x.days!==null && x.days<0).length;
+
+  const srcVal = DB.factory.sources.reduce((s,x)=>s+(Number(x.price)||0)*(Number(x.qty)||0),0);
+  const txns = DB.factory.transactions;
+  const income = txns.filter(t=>t.type==='income').reduce((s,t)=>s+Number(t.amount||0),0);
+  const expense = txns.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount||0),0);
+  // 本月
+  const ym = new Date().toISOString().slice(0,7);
+  const mIncome = txns.filter(t=>t.type==='income'&&(t.date||'').slice(0,7)===ym).reduce((s,t)=>s+Number(t.amount||0),0);
+  const mExpense = txns.filter(t=>t.type==='expense'&&(t.date||'').slice(0,7)===ym).reduce((s,t)=>s+Number(t.amount||0),0);
+
+  const bigPending = DB.bigExpenses.filter(b=>b.status==='pending');
+  const bigPendingSum = bigPending.reduce((s,b)=>s+Number(b.amount||0),0);
+
+  const cards = [
+    {k:'📝 未结债务总额',v:money(totalDebt),tag:(overdue?`逾期 ${overdue} 笔`:`待还 ${debts.length} 笔`),tc:'t-red'},
+    {k:'⏰ 30天内到期',v:urgent+' 笔',tag:urgent?'需关注':'安全',tc:urgent?'t-amber':'t-green'},
+    {k:'🏭 工厂库存估值',v:money(srcVal),tag:`${DB.factory.sources.length} 项`,tc:'t-blue'},
+    {k:'💱 累计入账 / 消费',v:money(income)+' / '+money(expense),tag:`净额 ${money(income-expense)}`,tc:income-expense>=0?'t-green':'t-red'},
+    {k:'📅 本月入账 / 消费',v:money(mIncome)+' / '+money(mExpense),tag:`净额 ${money(mIncome-mExpense)}`,tc:mIncome-mExpense>=0?'t-green':'t-red'},
+    {k:'💸 待批大额消费',v:money(bigPendingSum),tag:`${bigPending.length} 笔待批`,tc:'t-purple'}
+  ];
+  $('#statCards').innerHTML = cards.map(c=>`
+    <div class="stat">
+      <div class="k">${c.k}</div>
+      <div class="v">${c.v}</div>
+      <span class="tag ${c.tc}">${c.tag}</span>
+    </div>`).join('');
+
+  // 趋势图
+  const months = lastNMonths(6);
+  const incData = months.map(m=>txns.filter(t=>t.type==='income'&&(t.date||'').slice(0,7)===m).reduce((s,t)=>s+Number(t.amount||0),0));
+  const expData = months.map(m=>txns.filter(t=>t.type==='expense'&&(t.date||'').slice(0,7)===m).reduce((s,t)=>s+Number(t.amount||0),0));
+  drawBarChart('#trendChart', months.map(m=>m.slice(2)), incData, expData);
+
+  // 饼图：消费分类
+  const catMap={};
+  txns.filter(t=>t.type==='expense').forEach(t=>{ const c=t.cat||'其他'; catMap[c]=(catMap[c]||0)+Number(t.amount||0); });
+  const pieData=Object.entries(catMap).map(([k,v])=>({label:k,value:v})).sort((a,b)=>b.value-a.value);
+  drawPieChart('#pieChart', pieData);
+  $('#pieLegend').innerHTML = pieData.map((p,i)=>`<span><i style="background:${pieColor(i)}"></i>${esc(p.label)} ${money(p.value)}</span>`).join('');
+
+  // 到期预警列表
+  $('#dueCount').textContent = `共 ${due.length} 笔未结清`;
+  if(!due.length){ $('#dueList').innerHTML='<div class="empty">暂无未结清债务 🎉</div>'; }
+  else{
+    $('#dueList').innerHTML = due.map(({d,days})=>{
+      const l = dueLabel(d.due); const danger = days!==null&&days<=7;
+      return `<div class="alert-line ${danger?'':'amber'}" style="${days!==null&&days<0?'':(danger?'':'background:var(--amber-soft)')}">
+        <span><b>${esc(d.creditor)}</b> · ${money((Number(d.amount)||0)-(Number(d.repaid)||0))} · 到期 ${esc(d.due||'—')}</span>
+        <span class="${l.cls}">${l.txt}</span></div>`;
+    }).join('');
+  }
+  renderSyncBanner();
+}
+function lastNMonths(n){
+  const arr=[]; const d=new Date();
+  for(let i=n-1;i>=0;i--){ const x=new Date(d.getFullYear(),d.getMonth()-i,1); arr.push(x.toISOString().slice(0,7)); }
+  return arr;
+}
+
+/* ===================== 图表 ===================== */
+function drawBarChart(sel, labels, dataA, dataB){
+  const cv=$(sel); const ctx=cv.getContext('2d');
+  const W=cv.clientWidth||520, H=cv.height||220; cv.width=W;
+  ctx.clearRect(0,0,W,H);
+  const padL=46,padR=10,padT=14,padB=26;
+  const max=Math.max(1,...dataA,...dataB);
+  const bw=(W-padL-padR)/labels.length;
+  const gap=bw*0.22;
+  const yscale=(H-padT-padB)/max;
+  // gridlines
+  ctx.strokeStyle='#eef1f4'; ctx.fillStyle='#9aa5b1'; ctx.font='10px sans-serif'; ctx.textAlign='right';
+  for(let i=0;i<=4;i++){ const y=padT+(H-padT-padB)*i/4; const val=max*(1-i/4);
+    ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(W-padR,y);ctx.stroke();
+    ctx.fillText(val>=1000?(val/1000).toFixed(0)+'k':Math.round(val),padL-6,y+3); }
+  ctx.textAlign='center';
+  labels.forEach((lb,i)=>{
+    const x=padL+bw*i+bw/2;
+    const hA=dataA[i]*yscale, hB=dataB[i]*yscale;
+    ctx.fillStyle='#059669'; ctx.fillRect(x-gap/2-bw*0.18, H-padB-hA, bw*0.18, hA);
+    ctx.fillStyle='#e11d48'; ctx.fillRect(x+gap/2, H-padB-hB, bw*0.18, hB);
+    ctx.fillStyle='#7b8794'; ctx.fillText(lb, x, H-padB+16);
+  });
+}
+function pieColor(i){ const c=['#2563eb','#059669','#d97706','#7c3aed','#e11d48','#0891b2','#db2777','#65a30d']; return c[i%c.length]; }
+function drawPieChart(sel, data){
+  const cv=$(sel); const ctx=cv.getContext('2d');
+  const W=cv.clientWidth||260, H=cv.height||220; cv.width=W;
+  ctx.clearRect(0,0,W,H);
+  const total=data.reduce((s,p)=>s+p.value,0);
+  if(!total){ ctx.fillStyle='#9aa5b1'; ctx.font='12px sans-serif'; ctx.textAlign='center'; ctx.fillText('暂无消费数据',W/2,H/2); return; }
+  const cx=W/2, cy=H/2, r=Math.min(W,H)/2-14;
+  let ang=-Math.PI/2;
+  data.forEach((p,i)=>{
+    const slice=p.value/total*Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx,cy); ctx.arc(cx,cy,r,ang,ang+slice); ctx.closePath();
+    ctx.fillStyle=pieColor(i); ctx.fill(); ang+=slice;
+  });
+  // donut hole
+  ctx.beginPath(); ctx.arc(cx,cy,r*0.55,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+  ctx.fillStyle='#1f2933'; ctx.font='bold 13px sans-serif'; ctx.textAlign='center';
+  ctx.fillText(money(total),cx,cy-2); ctx.fillStyle='#9aa5b1'; ctx.font='10px sans-serif'; ctx.fillText('总消费',cx,cy+13);
+}
+
+/* ===================== 债务 ===================== */
+let editDebtId=null;
+$('#toggleDebtForm').onclick=()=>{ editDebtId=null; resetDebtForm(); $('#debtFormWrap').classList.toggle('open'); };
+$('#cancelDebt').onclick=()=>$('#debtFormWrap').classList.remove('open');
+function resetDebtForm(){ $('#d_creditor').value=''; $('#d_amount').value=''; $('#d_borrow').value=''; $('#d_due').value=''; $('#d_rate').value='0'; $('#d_status').value='active'; $('#d_repaid').value='0'; $('#d_note').value=''; }
+$('#saveDebt').onclick=()=>{
+  const creditor=$('#d_creditor').value.trim(); const amount=Number($('#d_amount').value);
+  if(!creditor){ toast('请填写债权人'); return; }
+  if(!(amount>0)){ toast('请填写有效金额'); return; }
+  const rec={ creditor, amount, borrowDate:$('#d_borrow').value, dueDate:$('#d_due').value,
+    rate:Number($('#d_rate').value)||0, status:$('#d_status').value, repaid:Number($('#d_repaid').value)||0, note:$('#d_note').value.trim() };
+  if(editDebtId){ const i=DB.debts.findIndex(d=>d.id===editDebtId); if(i>=0) DB.debts[i]={...DB.debts[i],...rec}; toast('已更新'); }
+  else { rec.id=uuid(); DB.debts.unshift(rec); toast('已添加债务'); }
+  saveDB(); $('#debtFormWrap').classList.remove('open'); renderDebt();
+};
+function renderDebt(){
+  const q=$('#debtSearch').value.trim().toLowerCase(); const f=$('#debtFilter').value;
+  let list=DB.debts.filter(d=>{
+    if(f!=='all'&&d.status!==f) return false;
+    if(q&&!(d.creditor.toLowerCase().includes(q)||(d.note||'').toLowerCase().includes(q))) return false;
+    return true;
+  });
+  list.sort((a,b)=> (daysUntil(a.dueDate)??1e9)-(daysUntil(b.dueDate)??1e9));
+  if(!list.length){ $('#debtTable').innerHTML='<div class="empty">暂无债务记录</div>'; return; }
+  const statusMap={active:['待还','t-red'],partial:['部分已还','t-amber'],paid:['已结清','t-green']};
+  $('#debtTable').innerHTML=`<table><thead><tr><th>债权人</th><th>金额</th><th>已还</th><th>剩余</th><th>借款</th><th>到期</th><th>状态</th><th>预警</th><th>操作</th></tr></thead><tbody>
+    ${list.map(d=>{ const l=dueLabel(d.dueDate); const rem=(Number(d.amount)||0)-(Number(d.repaid)||0); const [st,sc]=statusMap[d.status];
+      return `<tr>
+        <td><b>${esc(d.creditor)}</b>${d.note?`<div class="muted" style="font-size:11px">${esc(d.note)}</div>`:''}</td>
+        <td class="amt">${money(d.amount)}</td><td class="amt">${money(d.repaid)}</td><td class="amt">${money(rem)}</td>
+        <td>${esc(d.borrowDate||'—')}</td><td>${esc(d.dueDate||'—')}</td>
+        <td><span class="pill ${sc}">${st}</span></td><td class="${l.cls}">${l.txt}</td>
+        <td><button class="btn sm ghost" onclick="editDebt('${d.id}')">编辑</button> <button class="btn sm danger" onclick="delDebt('${d.id}')">删</button></td>
+      </tr>`;
+    }).join('')}</tbody></table>`;
+}
+window.editDebt=id=>{ const d=DB.debts.find(x=>x.id===id); if(!d)return; editDebtId=id;
+  $('#d_creditor').value=d.creditor; $('#d_amount').value=d.amount; $('#d_borrow').value=d.borrowDate||''; $('#d_due').value=d.dueDate||'';
+  $('#d_rate').value=d.rate||0; $('#d_status').value=d.status; $('#d_repaid').value=d.repaid||0; $('#d_note').value=d.note||'';
+  $('#debtFormWrap').classList.add('open'); window.scrollTo({top:0,behavior:'smooth'}); };
+window.delDebt=id=>{ if(!confirm('确认删除该债务记录？'))return; DB.debts=DB.debts.filter(x=>x.id!==id); saveDB(); renderDebt(); toast('已删除'); };
+$('#debtSearch').oninput=renderDebt; $('#debtFilter').onchange=renderDebt;
+
+/* ===================== 工厂 ===================== */
+$$('#factoryTabs button').forEach(b=>b.onclick=()=>{
+  $$('#factoryTabs button').forEach(x=>x.classList.remove('active')); b.classList.add('active');
+  const t=b.dataset.ftab; $('#ftab-source').style.display=t==='source'?'block':'none'; $('#ftab-txn').style.display=t==='txn'?'block':'none';
+});
+// 货源
+$('#toggleSrcForm').onclick=()=>{ resetSrcForm(); $('#srcFormWrap').classList.toggle('open'); };
+$('#cancelSrc').onclick=()=>$('#srcFormWrap').classList.remove('open');
+function resetSrcForm(){ ['s_name','s_supplier','s_type','s_price','s_qty','s_unit','s_date','s_note'].forEach(id=>$('#'+id).value=''); }
+$('#saveSrc').onclick=()=>{
+  const name=$('#s_name').value.trim(); if(!name){ toast('请填写名称'); return; }
+  const rec={ id:uuid(), name, supplier:$('#s_supplier').value.trim(), type:$('#s_type').value.trim(),
+    price:Number($('#s_price').value)||0, qty:Number($('#s_qty').value)||0, unit:$('#s_unit').value.trim(),
+    date:$('#s_date').value, note:$('#s_note').value.trim() };
+  DB.factory.sources.unshift(rec); saveDB(); $('#srcFormWrap').classList.remove('open'); renderFactory();
+};
+function renderFactory(){
+  const list=DB.factory.sources;
+  if(!list.length){ $('#srcTable').innerHTML='<div class="empty">暂无货源库存</div>'; }
+  else{
+    $('#srcTable').innerHTML=`<table><thead><tr><th>名称</th><th>供应商</th><th>类别</th><th>单价</th><th>数量</th><th>小计估值</th><th>入库</th><th>操作</th></tr></thead><tbody>
+      ${list.map(s=>{ const sub=(Number(s.price)||0)*(Number(s.qty)||0);
+        return `<tr><td><b>${esc(s.name)}</b></td><td>${esc(s.supplier||'—')}</td><td>${esc(s.type||'—')}</td>
+          <td>${money(s.price)}</td><td>${Number(s.qty||0)} ${esc(s.unit||'')}</td><td class="amt">${money(sub)}</td>
+          <td>${esc(s.date||'—')}</td>
+          <td><button class="btn sm danger" onclick="delSrc('${s.id}')">删</button></td></tr>`;
+      }).join('')}</tbody></table>
+      <div class="hint">库存总估值：<b>${money(list.reduce((s,x)=>s+(Number(x.price)||0)*(Number(x.qty)||0),0))}</b></div>`;
+  }
+  renderTxn();
+}
+window.delSrc=id=>{ if(!confirm('删除该货源？'))return; DB.factory.sources=DB.factory.sources.filter(x=>x.id!==id); saveDB(); renderFactory(); };
+
+// 流水
+let txnType='expense';
+$$('#txnTypeSeg button').forEach(b=>b.onclick=()=>{ $$('#txnTypeSeg button').forEach(x=>x.classList.remove('active')); b.classList.add('active'); txnType=b.dataset.type; });
+$('#toggleTxnForm').onclick=()=>{ $('#t_cat').value=''; $('#t_amount').value=''; $('#t_date').value=new Date().toISOString().slice(0,10); $('#t_note').value=''; $('#txnFormWrap').classList.toggle('open'); };
+$('#cancelTxn').onclick=()=>$('#txnFormWrap').classList.remove('open');
+$('#saveTxn').onclick=()=>{
+  const cat=$('#t_cat').value.trim(); const amount=Number($('#t_amount').value);
+  if(!cat){ toast('请填写分类'); return; } if(!(amount>0)){ toast('请填写有效金额'); return; }
+  DB.factory.transactions.unshift({ id:uuid(), type:txnType, cat, amount, date:$('#t_date').value||new Date().toISOString().slice(0,10), note:$('#t_note').value.trim() });
+  saveDB(); $('#txnFormWrap').classList.remove('open'); renderFactory();
+};
+function renderTxn(){
+  // fill month options
+  const months=[...new Set(DB.factory.transactions.map(t=>(t.date||'').slice(0,7)).filter(Boolean))].sort().reverse();
+  const sel=$('#txnMonth'); const cur=sel.value;
+  sel.innerHTML='<option value="all">全部月份</option>'+months.map(m=>`<option value="${m}">${m}</option>`).join('');
+  if(months.includes(cur)) sel.value=cur;
+  const tf=$('#txnTypeFilter').value, mf=$('#txnMonth').value;
+  let list=DB.factory.transactions.filter(t=>{
+    if(tf!=='all'&&t.type!==tf) return false;
+    if(mf!=='all'&&(t.date||'').slice(0,7)!==mf) return false; return true;
+  });
+  list.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  if(!list.length){ $('#txnTable').innerHTML='<div class="empty">暂无流水</div>'; return; }
+  $('#txnTable').innerHTML=`<table><thead><tr><th>日期</th><th>类型</th><th>分类</th><th>金额</th><th>备注</th><th>操作</th></tr></thead><tbody>
+    ${list.map(t=>`<tr>
+      <td>${esc(t.date||'—')}</td>
+      <td><span class="pill ${t.type==='income'?'t-green':'t-red'}">${t.type==='income'?'入账':'消费'}</span></td>
+      <td>${esc(t.cat)}</td>
+      <td class="amt" style="color:${t.type==='income'?'var(--green)':'var(--red)'}">${t.type==='income'?'+':'-'}${money(t.amount)}</td>
+      <td class="muted">${esc(t.note||'')}</td>
+      <td><button class="btn sm danger" onclick="delTxn('${t.id}')">删</button></td></tr>`).join('')}</tbody></table>`;
+}
+window.delTxn=id=>{ if(!confirm('删除该流水？'))return; DB.factory.transactions=DB.factory.transactions.filter(x=>x.id!==id); saveDB(); renderFactory(); };
+$('#txnTypeFilter').onchange=renderTxn; $('#txnMonth').onchange=renderTxn;
+
+/* ===================== 大额消费 ===================== */
+$('#toggleBigForm').onclick=()=>{ $('#b_title').value=''; $('#b_amount').value=''; $('#b_date').value=new Date().toISOString().slice(0,10); $('#b_cat').value=''; $('#b_status').value='pending'; $('#b_note').value=''; $('#bigFormWrap').classList.toggle('open'); };
+$('#cancelBig').onclick=()=>$('#bigFormWrap').classList.remove('open');
+$('#saveBig').onclick=()=>{
+  const title=$('#b_title').value.trim(); const amount=Number($('#b_amount').value);
+  if(!title){ toast('请填写事项'); return; } if(!(amount>0)){ toast('请填写有效金额'); return; }
+  DB.bigExpenses.unshift({ id:uuid(), title, amount, date:$('#b_date').value, cat:$('#b_cat').value.trim(), status:$('#b_status').value, note:$('#b_note').value.trim() });
+  saveDB(); $('#bigFormWrap').classList.remove('open'); renderBig();
+};
+function renderBig(){
+  const thr=Number($('#bigThreshold').value)||0; DB.settings.bigThreshold=thr;
+  const f=$('#bigFilter').value, onlyOver=$('#bigOnlyOver').checked;
+  let list=DB.bigExpenses.filter(b=>{
+    if(f!=='all'&&b.status!==f) return false;
+    if(onlyOver&&!(Number(b.amount)>thr)) return false; return true;
+  });
+  list.sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const statusMap={pending:['待审批','t-purple'],approved:['已通过','t-green'],rejected:['已驳回','t-red']};
+  if(!list.length){ $('#bigTable').innerHTML='<div class="empty">暂无大额消费记录</div>'; return; }
+  $('#bigTable').innerHTML=`<table><thead><tr><th>事项</th><th>金额</th><th>日期</th><th>类别</th><th>状态</th><th style="width:120px">超阈值</th><th>操作</th></tr></thead><tbody>
+    ${list.map(b=>{ const [st,sc]=statusMap[b.status]; const over=Number(b.amount)>thr;
+      return `<tr>
+        <td><b>${esc(b.title)}</b>${b.note?`<div class="muted" style="font-size:11px">${esc(b.note)}</div>`:''}</td>
+        <td class="amt">${money(b.amount)}</td><td>${esc(b.date||'—')}</td><td>${esc(b.cat||'—')}</td>
+        <td><span class="pill ${sc}">${st}</span></td>
+        <td>${over?`<span class="pill t-red">超阈值</span>`:'<span class="muted">—</span>'}</td>
+        <td>
+          <button class="btn sm ghost" onclick="cycleBig('${b.id}')">状态</button>
+          <button class="btn sm danger" onclick="delBig('${b.id}')">删</button>
+        </td></tr>`;
+    }).join('')}</tbody></table>
+    <div class="hint">大额消费合计：<b>${money(list.reduce((s,b)=>s+Number(b.amount||0),0))}</b> · 超过 ¥${thr.toLocaleString()} 的阈值共 <b>${list.filter(b=>Number(b.amount)>thr).length}</b> 笔</div>`;
+}
+window.cycleBig=id=>{ const b=DB.bigExpenses.find(x=>x.id===id); if(!b)return;
+  const seq=['pending','approved','rejected']; b.status=seq[(seq.indexOf(b.status)+1)%3]; saveDB(); renderBig(); };
+window.delBig=id=>{ if(!confirm('删除该大额消费？'))return; DB.bigExpenses=DB.bigExpenses.filter(x=>x.id!==id); saveDB(); renderBig(); };
+$('#bigThreshold').oninput=renderBig; $('#bigFilter').onchange=renderBig; $('#bigOnlyOver').onchange=renderBig;
+
+/* ===================== 数据 / JSON ===================== */
+function downloadJSON(){
+  const data=JSON.stringify(DB,null,2);
+  const blob=new Blob([data],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url;
+  a.download=`债厂通数据_${new Date().toISOString().slice(0,10)}.json`; a.click();
+  URL.revokeObjectURL(url);
+  $('#exportHint').textContent='已导出，文件内含全部债务 / 货源 / 流水 / 大额消费数据。';
+  toast('已导出 JSON');
+}
+$('#btnExportTop').onclick=downloadJSON;
+$('#btnExport').onclick=downloadJSON;
+$('#btnImport').onclick=()=>{
+  const f=$('#fileInput').files[0]; if(!f){ toast('请先选择 JSON 文件'); return; }
+  const r=new FileReader(); r.onload=()=>{
+    try{ const d=JSON.parse(r.result);
+      if(!d || typeof d!=='object' || !('debts' in d)) throw new Error('文件格式不正确');
+      DB=Object.assign(defaultDB(),d); saveDB();
+      $('#importHint').textContent='导入成功，已载入 '+DB.debts.length+' 笔债务、'+DB.factory.sources.length+' 项货源、'+DB.factory.transactions.length+' 条流水、'+DB.bigExpenses.length+' 笔大额消费。';
+      toast('导入成功'); switchView('dashboard');
+    }catch(e){ $('#importHint').textContent='导入失败：'+e.message; toast('导入失败'); }
+  }; r.readAsText(f);
+};
+$('#btnClear').onclick=()=>{ if(!confirm('将清空所有本地数据，且无法恢复！请先导出备份。确认清空？'))return;
+  DB=defaultDB(); saveDB(); toast('已清空'); switchView('dashboard'); };
+function renderDataMeta(){
+  $('#metaHint').textContent='当前数据更新时间：'+(DB.updatedAt?new Date(DB.updatedAt).toLocaleString('zh-CN'):'—')
+    +` · 债务 ${DB.debts.length} · 货源 ${DB.factory.sources.length} · 流水 ${DB.factory.transactions.length} · 大额 ${DB.bigExpenses.length}`;
+  fillSyncInputs(); renderSyncSettingsStatus();
+}
+
+/* ===================== 服务器同步体系（本地优先） ===================== */
+function syncConf(){
+  if(!DB.settings.sync) DB.settings.sync={enabled:false,endpoint:'',apiKey:'',deviceId:uuid(),lastSync:null,lastStatus:'idle',lastError:''};
+  return DB.settings.sync;
+}
+let _syncTimer=null;
+function scheduleSync(){
+  const s=syncConf();
+  if(!s.enabled || !s.endpoint) return; // 未启用或没地址则不联网
+  clearTimeout(_syncTimer);
+  _syncTimer=setTimeout(pushToServer, 800); // 防抖，避免频繁保存时狂发请求
+}
+async function pushToServer(){
+  const s=syncConf();
+  if(!s.enabled) return;
+  if(!s.endpoint){ s.lastStatus='error'; s.lastError='未配置服务器地址'; saveDB(); renderSyncBanner(); renderSyncSettingsStatus(); return; }
+  try{
+    const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(), 8000);
+    const res=await fetch(s.endpoint,{
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'}, s.apiKey?{'X-Api-Key':s.apiKey}:{}),
+      body:JSON.stringify({deviceId:s.deviceId, updatedAt:DB.updatedAt, data:DB}),
+      signal:ctrl.signal
+    });
+    clearTimeout(to);
+    if(!res.ok) throw new Error('服务器返回 '+res.status);
+    s.lastStatus='ok'; s.lastSync=new Date().toISOString(); s.lastError='';
+  }catch(e){
+    s.lastStatus='error'; s.lastError=(e&&e.message)||String(e); // 连不上也只记状态，绝不丢本地数据
+  }
+  saveDB();
+  renderSyncBanner();
+  renderSyncSettingsStatus();
+}
+function renderSyncBanner(){
+  const s=syncConf(); const el=$('#syncBanner'); if(!el) return;
+  let html='';
+  if(!s.enabled){
+    html=`<div class="banner banner-local">💾 <b>本地模式</b> · 未启用服务器同步，所有数据仅保存在本机浏览器（仍可在「数据/JSON」导出备份）。</div>`;
+  }else if(s.lastStatus==='error'){
+    html=`<div class="banner banner-err">⚠️ <b>已不能上传至服务器，请联系维护人员维护</b> · ${esc(s.lastError||'同步失败')} · 数据已安全保存在本地，不受影响。</div>`;
+  }else if(s.lastStatus==='ok'){
+    html=`<div class="banner banner-ok">✅ <b>已同步至服务器</b> · 最近同步：${new Date(s.lastSync).toLocaleString('zh-CN')}</div>`;
+  }else{
+    html=`<div class="banner banner-amber">🔄 正在等待与服务器建立同步…（数据已安全保存在本地）</div>`;
+  }
+  el.innerHTML=html;
+}
+function fillSyncInputs(){
+  const s=syncConf();
+  $('#syncEnabled').checked=!!s.enabled; $('#syncEndpoint').value=s.endpoint||''; $('#syncApiKey').value=s.apiKey||'';
+  $('#deviceIdShow').textContent=s.deviceId;
+}
+function renderSyncSettingsStatus(){
+  const s=syncConf();
+  const map={idle:'待同步',ok:'已同步',error:'同步失败 · 需维护',local:'未启用'};
+  $('#syncStatus').textContent='当前状态：'+(map[s.lastStatus]||s.lastStatus)+(s.lastError?(' · '+s.lastError):'')+(s.lastSync?(' · 最近 '+new Date(s.lastSync).toLocaleString('zh-CN')):'');
+}
+function applySyncInputs(){
+  const s=syncConf();
+  s.enabled=$('#syncEnabled').checked; s.endpoint=$('#syncEndpoint').value.trim(); s.apiKey=$('#syncApiKey').value.trim();
+}
+$('#saveSyncConf').onclick=()=>{ applySyncInputs(); saveDB(); fillSyncInputs(); renderSyncSettingsStatus(); renderSyncBanner(); toast('已保存同步设置'); if(syncConf().enabled) pushToServer(); };
+$('#btnSyncNow').onclick=()=>{ applySyncInputs(); saveDB(); renderSyncBanner(); pushToServer(); toast('正在同步…'); };
+$('#testSync').onclick=()=>{ applySyncInputs(); saveDB(); renderSyncBanner(); pushToServer(); toast('正在测试连接…'); };
+
+/* ===================== 初始化 ===================== */
+$('#bigThreshold').value=DB.settings.bigThreshold||5000;
+switchView('dashboard');
+toast('欢迎使用「债厂通」— 数据已自动保存在本地');
+</script>
+</body>
+</html>
